@@ -1,8 +1,10 @@
 import 'dart:io';
 
 import 'package:device_info_plus/device_info_plus.dart';
+import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:one_day_in_history/repositories/one_day_in_history/one_day_in_history_repository.dart';
 
 class HomePageScreen extends StatefulWidget {
   const HomePageScreen({super.key});
@@ -12,11 +14,13 @@ class HomePageScreen extends StatefulWidget {
 }
 
 class _HomePageScreenState extends State<HomePageScreen> {
-  String text = "Loading...";
+  String todayDate = '';
+  String oneHistory = '';
   @override
   void initState() {
     super.initState();
     loadInfo();
+    oneDayInHistory();
   }
 
   @override
@@ -24,46 +28,48 @@ class _HomePageScreenState extends State<HomePageScreen> {
     return Scaffold(
       appBar: AppBar(),
       drawer: const NavigationDrawer(),
-      body: SizedBox(
-        child: Center(
-          child: SingleChildScrollView(
-            child: Text(
-              text,
+      body: Center(
+        child: Column(
+          children: [
+            Text(
+              todayDate,
               style: const TextStyle(fontSize: 18),
             ),
-          ),
+            Text(
+              oneHistory,
+              style: const TextStyle(fontSize: 18),
+            ),
+          ],
         ),
       ),
     );
   }
-  
 
   /// loads device info
   void loadInfo() async {
-    DeviceInfoPlugin deviceInfo = DeviceInfoPlugin();
-
-    if (kIsWeb) {
-      WebBrowserInfo webBrowserInfo = await deviceInfo.webBrowserInfo;
-      setState(() {
-        text = webBrowserInfo.toString();
-      });
+    final deviceInfoPlugin = DeviceInfoPlugin();
+    if (Platform.isAndroid) {
+      await deviceInfoPlugin.androidInfo;
     } else if (Platform.isIOS) {
-      IosDeviceInfo iosInfo = await deviceInfo.iosInfo;
-      setState(() {
-        text = iosInfo.toString();
-      });
-    } else if (Platform.isAndroid) {
-      AndroidDeviceInfo androidInfo = await deviceInfo.androidInfo;
-      setState(() {
-        text = androidInfo.toString();
-      });
+      await deviceInfoPlugin.iosInfo;
     }
     final now = DateTime.now();
-    String currentDate = '${now.month}/${now.day}';
+    String currentDate = '${now.month}-${now.day}';
     setState(() {
-      text = currentDate;
+      todayDate = currentDate;
     });
-    Text(currentDate);
+    Text('Поточна дата: $currentDate');
+  }
+
+  void oneDayInHistory() async {
+    final dio = Dio();
+    final todayDate = DateTime.now();
+    final dateQuery =
+        '${todayDate.month}/${todayDate.day}/date'; // format must be "month/day/date"
+    final response = await dio.get('http://numbersapi.com/$dateQuery');
+    setState(() {
+      oneHistory = response.data;
+    });
   }
 }
 
